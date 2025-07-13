@@ -1,5 +1,7 @@
-# hdrezka-plugin v3.0
-Плагин, позволяющий переключить следующую серию сериала на сайте HDrezka по нажати выбранной клавиши в настройках.
+## hdrezka-plugin v3.0
+
+Плагин, позволяющий переключить следующую серию сериала на сайте HDrezka по нажатию выбранной клавиши в настройках.
+
 
 This document outlines the technical stack and guidelines for making modifications to the HDRezka Plugin.
 
