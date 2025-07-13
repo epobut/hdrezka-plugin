@@ -37,26 +37,48 @@ function simulateClickAtCenterGeneric() {
   }
 }
 
-// Новая функция для попытки прямого воспроизведения видео
-function tryPlayVideo() {
+// Функция для одной попытки прямого воспроизведения видео или имитации клика
+function tryPlayVideoOnce() {
   const videoElement = document.querySelector('video'); // Ищем видеоэлемент
   if (videoElement) {
     if (videoElement.paused) {
-      console.log('HDRezka Plugin: Video is paused, attempting to play.');
+      console.log('HDRezka Plugin: Video is paused, attempting to play directly.');
       videoElement.play().then(() => {
         console.log('HDRezka Plugin: Video play successful.');
       }).catch(error => {
-        console.error('HDRezka Plugin: Video play failed (likely autoplay policy):', error);
-        // Если прямое воспроизведение не удалось, пробуем имитировать клик
-        simulateClickAtCenterGeneric();
+        console.error('HDRezka Plugin: Video play failed (likely autoplay policy), falling back to click:', error);
+        simulateClickAtCenterGeneric(); // Если прямое воспроизведение не удалось, пробуем имитировать клик
       });
     } else {
       console.log('HDRezka Plugin: Video is already playing.');
     }
   } else {
-    console.log('HDRezka Plugin: No video element found, falling back to generic click.');
-    simulateClickAtCenterGeneric();
+    console.log('HDRezka Plugin: No video element found, attempting generic click.');
+    simulateClickAtCenterGeneric(); // Если видеоэлемент не найден, пробуем имитировать клик
   }
+}
+
+// Функция для многократных попыток воспроизведения
+function attemptPlayWithRetries(maxRetries = 10, delayMs = 500) {
+  let retries = 0;
+  const intervalId = setInterval(() => {
+    if (retries >= maxRetries) {
+      clearInterval(intervalId);
+      console.log('HDRezka Plugin: Max retries reached for autoplay. Giving up.');
+      return;
+    }
+
+    const videoElement = document.querySelector('video');
+    if (videoElement && !videoElement.paused) {
+      console.log('HDRezka Plugin: Video is now playing. Stopping retries.');
+      clearInterval(intervalId);
+      return;
+    }
+
+    console.log(`HDRezka Plugin: Autoplay attempt ${retries + 1}/${maxRetries}...`);
+    tryPlayVideoOnce();
+    retries++;
+  }, delayMs);
 }
 
 let configuredNextEpisodeKey = DEFAULT_NEXT_EPISODE_KEY; // Инициализируем значением по умолчанию
@@ -82,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem(AUTOPLAY_FLAG_KEY) === "true") {
     localStorage.removeItem(AUTOPLAY_FLAG_KEY); // Очищаем флаг
     console.log('HDRezka Plugin: Autoplay flag detected. Attempting to play video...');
-    setTimeout(tryPlayVideo, 1500); // Увеличена задержка для автовоспроизведения
+    // Начинаем попытки автовоспроизведения через 1 секунду, 10 попыток с интервалом 500мс
+    setTimeout(() => attemptPlayWithRetries(10, 500), 1000);
   }
 });
 
@@ -151,7 +174,8 @@ document.addEventListener('keydown', (event) => {
             });
             item.dispatchEvent(clickEvent);
             console.log('HDRezka Plugin: Click event dispatched for next episode item.');
-            setTimeout(tryPlayVideo, 200); // Попытка автовоспроизведения после клика, используем tryPlayVideo
+            // Начинаем попытки автовоспроизведения после клика по следующей серии
+            setTimeout(() => attemptPlayWithRetries(10, 500), 500); 
           }, 50);
 
           nextEpisodeLinkFound = true;
