@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "HDRezka Plugin",
+  "version": "3.0",
+  "description": "Enhances HDRezka.ag with keyboard shortcuts for playback and navigation.",
+  "icons": {
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "options.html",
+    "default_icon": {
+      "128": "icon128.png"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.hdrezka.ag/*"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.hdrezka.ag/*",
+        "*://*.hdrezka.me/*",
+        "*://*.hdrezka.tv/*",
+        "*://*.hdrezka.re/*",
+        "*://*.hdrezka.sh/*",
+        "*://*.hdrezka.cc/*",
+        "*://*.hdrezka.im/*",
+        "*://*.hdrezka.fun/*",
+        "*://*.hdrezka.pro/*",
+        "*://*.hdrezka.cx/*",
+        "*://*.hdrezka.mn/*",
+        "*://*.hdrezka.ws/*",
+        "*://*.hdrezka.bz/*",
+        "*://*.hdrezka.pm/*"
+      ],
+      "js": ["content.js"]
+    }
+  ],
+  "options_page": "options.html"
+}
