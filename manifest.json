@@ -13,7 +13,25 @@
     }
   },
   "permissions": ["storage"],
-  "host_permissions": ["*://*.hdrezka.ag/*"],
+  "host_permissions": [
+    "*://*.hdrezka.ag/*",
+    "*://*.hdrezka.me/*",
+    "*://*.hdrezka.tv/*",
+    "*://*.hdrezka.re/*",
+    "*://*.hdrezka.sh/*",
+    "*://*.hdrezka.cc/*",
+    "*://*.hdrezka.im/*",
+    "*://*.hdrezka.fun/*",
+    "*://*.hdrezka.pro/*",
+    "*://*.hdrezka.cx/*",
+    "*://*.hdrezka.mn/*",
+    "*://*.hdrezka.ws/*",
+    "*://*.hdrezka.bz/*",
+    "*://*.hdrezka.pm/*",
+    "*://*.rezka.ag/*",
+    "*://*.rezka.tv/*",
+    "*://*.rezka.me/*"
+  ],
   "content_scripts": [
     {
       "matches": [
@@ -30,7 +48,10 @@
         "*://*.hdrezka.mn/*",
         "*://*.hdrezka.ws/*",
         "*://*.hdrezka.bz/*",
-        "*://*.hdrezka.pm/*"
+        "*://*.hdrezka.pm/*",
+        "*://*.rezka.ag/*",
+        "*://*.rezka.tv/*",
+        "*://*.rezka.me/*"
       ],
       "js": ["content.js"]
     }
