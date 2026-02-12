@@ -7,8 +7,9 @@ const availableKeys = [
   { label: "N (Next)", value: "KeyN" },
   { label: "M (Media)", value: "KeyM" },
   { label: "F (Forward)", value: "KeyF" },
-  { label: "Enter (основная)", value: "Enter" }, // Переименовал для ясности
-  { label: "Enter (Numpad)", value: "NumpadEnter" }, // Добавлена клавиша Enter с нумпада
+  { label: "Enter (основная)", value: "Enter" }, 
+  { label: "Enter (Numpad)", value: "NumpadEnter" }, 
+  { label: "/ . (Slash key)", value: "Slash" },
 ];
 
 async function loadNextEpisodeKey() {

@@ -1,7 +1,121 @@
 // Константы для ключа хранения и значения по умолчанию
 const NEXT_EPISODE_KEY_STORAGE_KEY = "hdrezka_next_episode_key";
-const DEFAULT_NEXT_EPISODE_KEY = "PageDown";
+const DEFAULT_NEXT_EPISODE_KEY = "Slash";
 const AUTOPLAY_FLAG_KEY = "hdrezka_autoplay_next_episode"; // Новый ключ для флага автовоспроизведения
+const EPISODE_OVERLAY_PENDING_KEY = "hdrezka_episode_overlay_pending";
+
+let episodeOverlayHideTimeoutId = null;
+
+function getCurrentEpisodeNumberForOverlay() {
+  const activeEpisodeItem = document.querySelector('.b-simple_episode__item.active, .b-simple_episode__item.selected');
+  if (activeEpisodeItem) {
+    const activeEpisodeId = activeEpisodeItem.getAttribute('data-episode_id');
+    if (activeEpisodeId) {
+      return parseInt(activeEpisodeId, 10);
+    }
+  }
+
+  const hashEpisodeMatch = window.location.hash.match(/-e:(\d+)/);
+  if (hashEpisodeMatch && hashEpisodeMatch[1]) {
+    return parseInt(hashEpisodeMatch[1], 10);
+  }
+
+  const urlEpisodeMatch = window.location.href.match(/-e:(\d+)/);
+  if (urlEpisodeMatch && urlEpisodeMatch[1]) {
+    return parseInt(urlEpisodeMatch[1], 10);
+  }
+
+  return null;
+}
+
+function showEpisodeOverlayForThreeSeconds(episodeNumber = null) {
+  const resolvedEpisodeNumber = episodeNumber || getCurrentEpisodeNumberForOverlay();
+  if (!resolvedEpisodeNumber) {
+    return;
+  }
+
+  const overlayHost = document.fullscreenElement || document.webkitFullscreenElement || document.body;
+  let overlayElement = document.getElementById('hdrezka-episode-overlay');
+
+  if (!overlayElement) {
+    overlayElement = document.createElement('div');
+    overlayElement.id = 'hdrezka-episode-overlay';
+    overlayElement.style.position = 'fixed';
+    overlayElement.style.top = '16px';
+    overlayElement.style.left = '16px';
+    overlayElement.style.zIndex = '2147483647';
+    overlayElement.style.padding = '8px 12px';
+    overlayElement.style.background = 'rgba(0, 0, 0, 0.75)';
+    overlayElement.style.color = '#ffffff';
+    overlayElement.style.fontSize = '16px';
+    overlayElement.style.fontWeight = '600';
+    overlayElement.style.borderRadius = '8px';
+    overlayElement.style.pointerEvents = 'none';
+    overlayElement.style.fontFamily = 'Arial, sans-serif';
+  }
+
+  if (overlayElement.parentElement !== overlayHost) {
+    overlayHost.appendChild(overlayElement);
+  }
+
+  overlayElement.textContent = `Серия ${resolvedEpisodeNumber}`;
+  overlayElement.style.display = 'block';
+
+  if (episodeOverlayHideTimeoutId) {
+    clearTimeout(episodeOverlayHideTimeoutId);
+  }
+
+  episodeOverlayHideTimeoutId = setTimeout(() => {
+    overlayElement.style.display = 'none';
+    episodeOverlayHideTimeoutId = null;
+  }, 3000);
+}
+
+function markPendingEpisodeOverlay(episodeNumber) {
+  if (!episodeNumber) {
+    return;
+  }
+
+  localStorage.setItem(EPISODE_OVERLAY_PENDING_KEY, String(episodeNumber));
+}
+
+function consumePendingEpisodeOverlayIfAny() {
+  const pendingEpisodeValue = localStorage.getItem(EPISODE_OVERLAY_PENDING_KEY);
+  if (!pendingEpisodeValue) {
+    return false;
+  }
+
+  const pendingEpisodeNumber = parseInt(pendingEpisodeValue, 10);
+  if (!pendingEpisodeNumber) {
+    localStorage.removeItem(EPISODE_OVERLAY_PENDING_KEY);
+    return false;
+  }
+
+  showEpisodeOverlayForThreeSeconds(pendingEpisodeNumber);
+  localStorage.removeItem(EPISODE_OVERLAY_PENDING_KEY);
+  return true;
+}
+
+function ensurePendingOverlayShownOnPlaybackStart() {
+  const videoElement = document.querySelector('video');
+  if (!videoElement) {
+    return;
+  }
+
+  if (!videoElement.paused && !videoElement.ended) {
+    consumePendingEpisodeOverlayIfAny();
+    return;
+  }
+
+  const showPendingOverlayWhenPlaybackStarts = () => {
+    if (!videoElement.paused && !videoElement.ended) {
+      consumePendingEpisodeOverlayIfAny();
+    }
+  };
+
+  videoElement.addEventListener('play', showPendingOverlayWhenPlaybackStarts, { once: true });
+  videoElement.addEventListener('playing', showPendingOverlayWhenPlaybackStarts, { once: true });
+}
 
 // Функция для загрузки сохраненной клавиши
 async function loadNextEpisodeKey() {
@@ -71,6 +185,7 @@ function attemptPlayWithRetries(maxRetries = 10, delayMs = 500) {
     const videoElement = document.querySelector('video');
     if (videoElement && !videoElement.paused) {
       console.log('HDRezka Plugin: Video is now playing. Stopping retries.');
+      consumePendingEpisodeOverlayIfAny();
       clearInterval(intervalId);
       return;
     }
@@ -107,6 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Начинаем попытки автовоспроизведения через 1 секунду, 10 попыток с интервалом 500мс
     setTimeout(() => attemptPlayWithRetries(10, 500), 1000);
   }
+
+  ensurePendingOverlayShownOnPlaybackStart();
 });
 
 document.addEventListener('keydown', (event) => {
@@ -162,7 +279,8 @@ document.addEventListener('keydown', (event) => {
             parseInt(episodeId, 10) === nextEpisode &&
             parseInt(seasonId, 10) === currentSeason) {
           console.log(`HDRezka Plugin: Found item for episode ${nextEpisode} in season ${currentSeason}, attempting click.`);
-          
+          markPendingEpisodeOverlay(nextEpisode);
+
           setTimeout(() => {
             const clickEvent = new MouseEvent('click', {
               view: window,
@@ -186,6 +304,7 @@ document.addEventListener('keydown', (event) => {
       if (!nextEpisodeLinkFound) {
         console.warn(`HDRezka Plugin: Item for episode ${nextEpisode} in season ${currentSeason} not found. Attempting URL navigation fallback.`);
         localStorage.setItem(AUTOPLAY_FLAG_KEY, "true"); // Устанавливаем флаг для автовоспроизведения на новой странице
+        markPendingEpisodeOverlay(nextEpisode);
         const newUrl = currentUrl.replace(episodeRegex, `-e:${nextEpisode}`);
         window.location.replace(newUrl);
         console.log('HDRezka Plugin: Falling back to navigating to next episode URL:', newUrl);
