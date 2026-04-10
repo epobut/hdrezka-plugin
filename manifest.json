@@ -30,6 +30,8 @@
     "*://*.hdrezka.pm/*",
     "*://*.rezka.ag/*",
     "*://*.rezka.tv/*",
+	"*://*.hdrezka-home.tv/*",
+	"*://*.rezka-ua.co/*",
     "*://*.rezka.me/*"
   ],
   "content_scripts": [
@@ -51,6 +53,8 @@
         "*://*.hdrezka.pm/*",
         "*://*.rezka.ag/*",
         "*://*.rezka.tv/*",
+		"*://*.hdrezka-home.tv/*",
+		"*://*.rezka-ua.co/*",
         "*://*.rezka.me/*"
       ],
       "js": ["content.js"]

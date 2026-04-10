@@ -3,8 +3,244 @@ const NEXT_EPISODE_KEY_STORAGE_KEY = "hdrezka_next_episode_key";
 const DEFAULT_NEXT_EPISODE_KEY = "Slash";
 const AUTOPLAY_FLAG_KEY = "hdrezka_autoplay_next_episode"; // Новый ключ для флага автовоспроизведения
 const EPISODE_OVERLAY_PENDING_KEY = "hdrezka_episode_overlay_pending";
+const FAVORITE_SERIES_STORAGE_KEY = "hdrezka_favorite_series";
 
+let favoriteSeriesObserver = null;
+let favoriteSeriesRefreshTimeoutId = null;
 let episodeOverlayHideTimeoutId = null;
+
+function normalizeSeriesTitle(title) {
+  return (title || '').replace(/\s+/g, ' ').trim();
+}
+
+async function getFromExtensionStorage(key) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    const result = await chrome.storage.local.get(key);
+    return result[key];
+  }
+
+  return localStorage.getItem(key);
+}
+
+async function setInExtensionStorage(key, value) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    await chrome.storage.local.set({ [key]: value });
+    return;
+  }
+
+  if (typeof value === 'string') {
+    localStorage.setItem(key, value);
+  } else {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+}
+
+async function loadFavoriteSeriesTitles() {
+  const storedValue = await getFromExtensionStorage(FAVORITE_SERIES_STORAGE_KEY);
+
+  if (!storedValue) {
+    return [];
+  }
+
+  if (Array.isArray(storedValue)) {
+    return storedValue.map(normalizeSeriesTitle).filter(Boolean);
+  }
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    return Array.isArray(parsedValue)
+      ? parsedValue.map(normalizeSeriesTitle).filter(Boolean)
+      : [];
+  } catch (error) {
+    console.warn('HDRezka Plugin: Failed to parse favorite series list.', error);
+    return [];
+  }
+}
+
+async function saveFavoriteSeriesTitles(seriesTitles) {
+  const uniqueTitles = Array.from(new Set(seriesTitles.map(normalizeSeriesTitle).filter(Boolean)));
+  await setInExtensionStorage(FAVORITE_SERIES_STORAGE_KEY, uniqueTitles);
+}
+
+function ensureFavoriteSeriesStyles() {
+  if (document.getElementById('hdrezka-favorite-series-styles')) {
+    return;
+  }
+
+  const styleElement = document.createElement('style');
+  styleElement.id = 'hdrezka-favorite-series-styles';
+  styleElement.textContent = `
+    .hdrezka-favorite-series-item .b-seriesupdate__block_list_item_inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hdrezka-favorite-series-item .b-seriesupdate__block_list_item_inner .cell-1 {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .hdrezka-favorite-series-item .b-seriesupdate__block_list_item_inner .cell-2 {
+      flex: 0 0 auto;
+    }
+
+    .hdrezka-favorite-series-toggle {
+      flex: 0 0 auto;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #b6b6b6;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .hdrezka-favorite-series-toggle svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
+    .hdrezka-favorite-series-toggle:hover {
+      color: #ff9800;
+    }
+
+    .hdrezka-favorite-series-item.is-favorite .hdrezka-favorite-series-toggle {
+      color: #ff9800;
+    }
+
+    .hdrezka-favorite-series-item.is-favorite .b-seriesupdate__block_list_link {
+      color: #ff9800 !important;
+      font-weight: 600;
+    }
+  `;
+
+  document.head.appendChild(styleElement);
+}
+
+function createFavoriteStarIcon(isFavorite) {
+  return isFavorite
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.25l2.96 6 6.62.96-4.79 4.67 1.13 6.59L12 17.36l-5.92 3.11 1.13-6.59-4.79-4.67 6.62-.96L12 2.25z"></path></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.25l2.96 6 6.62.96-4.79 4.67 1.13 6.59L12 17.36l-5.92 3.11 1.13-6.59-4.79-4.67 6.62-.96L12 2.25z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>';
+}
+
+function applyFavoriteStateToSeriesItem(listItem, isFavorite) {
+  listItem.classList.toggle('is-favorite', isFavorite);
+
+  const buttonElement = listItem.querySelector('.hdrezka-favorite-series-toggle');
+  if (!buttonElement) {
+    return;
+  }
+
+  buttonElement.setAttribute('aria-pressed', isFavorite ? 'true' : 'false');
+  buttonElement.setAttribute('title', isFavorite ? 'Убрать из избранного' : 'Добавить в избранное');
+  buttonElement.innerHTML = createFavoriteStarIcon(isFavorite);
+}
+
+async function toggleFavoriteSeries(seriesTitle, listItem) {
+  const normalizedTitle = normalizeSeriesTitle(seriesTitle);
+  if (!normalizedTitle) {
+    return;
+  }
+
+  const favoriteTitles = await loadFavoriteSeriesTitles();
+  const favoriteSet = new Set(favoriteTitles);
+  const isFavoriteNow = favoriteSet.has(normalizedTitle);
+
+  if (isFavoriteNow) {
+    favoriteSet.delete(normalizedTitle);
+  } else {
+    favoriteSet.add(normalizedTitle);
+  }
+
+  await saveFavoriteSeriesTitles(Array.from(favoriteSet));
+  applyFavoriteStateToSeriesItem(listItem, !isFavoriteNow);
+}
+
+async function decorateSeriesUpdateList() {
+  const seriesListItems = document.querySelectorAll('.b-seriesupdate__block_list_item');
+  if (!seriesListItems.length) {
+    return;
+  }
+
+  ensureFavoriteSeriesStyles();
+  const favoriteTitles = await loadFavoriteSeriesTitles();
+  const favoriteSet = new Set(favoriteTitles);
+
+  seriesListItems.forEach((listItem) => {
+    const seriesLink = listItem.querySelector('.b-seriesupdate__block_list_link');
+    const innerContainer = listItem.querySelector('.b-seriesupdate__block_list_item_inner');
+
+    if (!seriesLink || !innerContainer) {
+      return;
+    }
+
+    const seriesTitle = normalizeSeriesTitle(seriesLink.textContent);
+    if (!seriesTitle) {
+      return;
+    }
+
+    listItem.classList.add('hdrezka-favorite-series-item');
+
+    let favoriteButton = listItem.querySelector('.hdrezka-favorite-series-toggle');
+    if (!favoriteButton) {
+      favoriteButton = document.createElement('button');
+      favoriteButton.type = 'button';
+      favoriteButton.className = 'hdrezka-favorite-series-toggle';
+      favoriteButton.setAttribute('aria-label', `Переключить избранное для "${seriesTitle}"`);
+      favoriteButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        await toggleFavoriteSeries(seriesTitle, listItem);
+      });
+      innerContainer.appendChild(favoriteButton);
+    }
+
+    applyFavoriteStateToSeriesItem(listItem, favoriteSet.has(seriesTitle));
+  });
+}
+
+function scheduleFavoriteSeriesRefresh() {
+  if (favoriteSeriesRefreshTimeoutId) {
+    clearTimeout(favoriteSeriesRefreshTimeoutId);
+  }
+
+  favoriteSeriesRefreshTimeoutId = setTimeout(() => {
+    favoriteSeriesRefreshTimeoutId = null;
+    decorateSeriesUpdateList();
+  }, 100);
+}
+
+function initFavoriteSeriesFeature() {
+  decorateSeriesUpdateList();
+
+  if (favoriteSeriesObserver) {
+    return;
+  }
+
+  favoriteSeriesObserver = new MutationObserver(() => {
+    scheduleFavoriteSeriesRefresh();
+  });
+
+  favoriteSeriesObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local' && changes[FAVORITE_SERIES_STORAGE_KEY]) {
+        decorateSeriesUpdateList();
+      }
+    });
+  }
+}
 
 function getCurrentEpisodeNumberForOverlay() {
   const activeEpisodeItem = document.querySelector('.b-simple_episode__item.active, .b-simple_episode__item.selected');
@@ -224,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   ensurePendingOverlayShownOnPlaybackStart();
+  initFavoriteSeriesFeature();
 });
 
 document.addEventListener('keydown', (event) => {
@@ -314,3 +551,7 @@ document.addEventListener('keydown', (event) => {
     }
   }
 }, true);
+
+if (document.readyState !== 'loading') {
+  initFavoriteSeriesFeature();
+}

@@ -1,44 +1,70 @@
-# ⏭️ HDRezka Enhancer: Auto-Next & Overlay
+﻿# hdrezka-plugin
 
-[UA] Розширення для браузера, що додає автоплей, гарячі клавіші та інфо-оверлей для серіалів на HDRezka.
-[EN] Browser extension that adds autoplay, hotkeys, and an episode info overlay for HDRezka series.
+Расширение для Chrome, которое улучшает просмотр сериалов на HDRezka и совместимых зеркалах.
 
----
+## Возможности
 
-## ⚡ Що він робить? / Key Features
+- Переход к следующей серии по настраиваемой клавише.
+- Сохранение выбранной клавиши в `chrome.storage.local`.
+- Попытка автозапуска видео после перехода на следующую серию.
+- Оверлей с номером текущей серии при старте воспроизведения.
+- Избранное в списке обновлений сериалов:
+  - звезда справа от названия;
+  - пустая звезда для обычного состояния;
+  - залитая звезда для избранного;
+  - оранжевая подсветка выбранного сериала;
+  - сохранение списка избранного между сессиями.
 
-### 🇺🇦 Українською:
-- **Smart Autoplay:** Автоматично запускає відео, обходячи блокування браузера (робить "розумний" клік).
-- **Гаряча клавіша:** Перемикайте на наступну серію однією кнопкою (за замовчуванням `/` або `Slash`).
-- **Інфо-оверлей:** При старті серії у кутку з'являється плашка "Серія X" на 3 секунди. Працює навіть у повноекранному режимі.
-- **Розумне визначення:** Автоматично зчитує номер серії з URL або структури сайту.
+## Поддерживаемые домены
 
----
+- `hdrezka.ag`
+- `hdrezka.me`
+- `hdrezka.tv`
+- `hdrezka.re`
+- `hdrezka.sh`
+- `hdrezka.cc`
+- `hdrezka.im`
+- `hdrezka.fun`
+- `hdrezka.pro`
+- `hdrezka.cx`
+- `hdrezka.mn`
+- `hdrezka.ws`
+- `hdrezka.bz`
+- `hdrezka.pm`
+- `rezka.ag`
+- `rezka.tv`
+- `hdrezka-home.tv`
+- `rezka-ua.co`
+- `rezka.me`
 
-### 🇺🇸 English:
-- **Smart Autoplay:** Automatically triggers video playback by simulating a "smart click" to bypass browser policies.
-- **Custom Hotkey:** Switch to the next episode instantly (default: `Slash` `/`).
-- **Episode Overlay:** Shows a sleek "Episode X" notification in the top-left corner for 3 seconds. Fullscreen compatible.
-- **Auto-Detection:** Detects the current episode number via URL, hash, or site DOM.
+## Установка
 
----
+1. Открой `chrome://extensions`.
+2. Включи `Режим разработчика`.
+3. Нажми `Загрузить распакованное расширение`.
+4. Выбери папку проекта.
 
-## 🛠 Налаштування / Setup
+## Использование
 
-### 🇺🇦 Як встановити:
-1. Завантажте файли розширення.
-2. Перейдіть у `chrome://extensions/`.
-3. Увімкніть **Developer mode**.
-4. Натисніть **Load unpacked** та оберіть папку з проектом.
+1. Открой popup расширения и выбери клавишу для перехода к следующей серии.
+2. На странице сериала используй выбранную клавишу для перехода к следующей серии.
+3. На странице со списком обновлений нажимай на звезду справа от сериала, чтобы добавить или убрать его из избранного.
 
-### 🇺🇸 How to install:
-1. Download the extension files.
-2. Open `chrome://extensions/`.
-3. Enable **Developer mode**.
-4. Click **Load unpacked** and select the project folder.
+## Хранение данных
 
----
+- Настройки и избранные сериалы сохраняются в `chrome.storage.local`.
+- Вне контекста расширения используется запасной вариант через `localStorage`.
+- Список избранного хранится локально в браузере и не попадает в репозиторий.
 
-## 📝 Технічні деталі / Tech
-- **Core:** Pure JavaScript, Chrome Storage API, DOM Mutation.
-- **UI:** CSS-in-JS overlay, works over HTML5 Video layers.
+## Структура проекта
+
+- `manifest.json` - манифест расширения.
+- `content.js` - логика на страницах HDRezka.
+- `options.html` - интерфейс popup.
+- `options.js` - настройка и сохранение горячей клавиши.
+
+## Разработка
+
+- Проект написан на чистом JavaScript без внешних зависимостей.
+- Сборка не нужна: расширение работает напрямую из файлов проекта.
+- Текущая версия манифеста: `3.0`.
