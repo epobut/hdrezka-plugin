@@ -1,0 +1,28 @@
+name: Upload Release Assets
+
+on:
+  push:
+    tags:
+      - 'v*' # Спрацьовує на теги v1.0, v2.1 тощо
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Дозвіл на зміну релізів
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Тут можна додати кроки збірки (npm build, go build тощо)
+      # Наприклад, створимо архів для тесту:
+      - name: Create Archive
+        run: tar -cvzf release-files.tar.gz * 
+
+      - name: Update Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-files.tar.gz # Файл, який треба завантажити
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
