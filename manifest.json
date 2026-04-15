@@ -1,8 +1,8 @@
-{
+﻿{
   "manifest_version": 3,
   "name": "HDRezka Plugin",
-  "version": "3.0",
-  "description": "Enhances HDRezka.ag with keyboard shortcuts for playback and navigation.",
+  "version": "3.1",
+  "description": "Enhances Rezka-like sites with keyboard shortcuts for playback and navigation.",
   "icons": {
     "128": "icon128.png"
   },
@@ -13,51 +13,11 @@
     }
   },
   "permissions": ["storage"],
-  "host_permissions": [
-    "*://*.hdrezka.ag/*",
-    "*://*.hdrezka.me/*",
-    "*://*.hdrezka.tv/*",
-    "*://*.hdrezka.re/*",
-    "*://*.hdrezka.sh/*",
-    "*://*.hdrezka.cc/*",
-    "*://*.hdrezka.im/*",
-    "*://*.hdrezka.fun/*",
-    "*://*.hdrezka.pro/*",
-    "*://*.hdrezka.cx/*",
-    "*://*.hdrezka.mn/*",
-    "*://*.hdrezka.ws/*",
-    "*://*.hdrezka.bz/*",
-    "*://*.hdrezka.pm/*",
-    "*://*.rezka.ag/*",
-    "*://*.rezka.tv/*",
-	"*://*.hdrezka-home.tv/*",
-	"*://*.rezka-ua.co/*",
-    "*://*.rezka.me/*"
-  ],
+  "host_permissions": ["<all_urls>"],
   "content_scripts": [
     {
-      "matches": [
-        "*://*.hdrezka.ag/*",
-        "*://*.hdrezka.me/*",
-        "*://*.hdrezka.tv/*",
-        "*://*.hdrezka.re/*",
-        "*://*.hdrezka.sh/*",
-        "*://*.hdrezka.cc/*",
-        "*://*.hdrezka.im/*",
-        "*://*.hdrezka.fun/*",
-        "*://*.hdrezka.pro/*",
-        "*://*.hdrezka.cx/*",
-        "*://*.hdrezka.mn/*",
-        "*://*.hdrezka.ws/*",
-        "*://*.hdrezka.bz/*",
-        "*://*.hdrezka.pm/*",
-        "*://*.rezka.ag/*",
-        "*://*.rezka.tv/*",
-		"*://*.hdrezka-home.tv/*",
-		"*://*.rezka-ua.co/*",
-        "*://*.rezka.me/*"
-      ],
-      "js": ["content.js"]
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["favorites.js", "playback.js", "ui.js", "content.js"]
     }
   ],
   "options_page": "options.html"
